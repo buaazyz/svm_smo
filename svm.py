@@ -66,9 +66,9 @@ def iteration_a2(j, type, toler):
     atemp = a[j] + temp
 
     L, H = cal_LnH(i, j, y, a, C)
-    if atemp <= L+toler:
+    if atemp <= L + toler:
         a[j] = L
-    elif (atemp >= H-toler):
+    elif (atemp >= H - toler):
         a[j] = H
     else:
         a[j] = atemp
@@ -85,7 +85,7 @@ def iteration_a2(j, type, toler):
     b2 = -cal_E(j, type) - y[i] * (a[i] - ai_old) * ker(i, j, type) - y[j] * (a[j] - aj_old) * ker(j, j, type) + b
     if 0 < a[i] < C:
         b = b1
-    elif 0 < a[j] <C:
+    elif 0 < a[j] < C:
         b = b2
     else:
         b = (b1 + b2) / 2.0
@@ -116,7 +116,6 @@ def find_a1(j, type, toler=0.0001):
                 index = i
     # print(index)
     return index
-
 
 
 # 对于参数alpha的更新，其基本的原则遍历所有的a，取不符合KKT条件的a作为为第一个参数
@@ -151,68 +150,57 @@ def main():
     df1 = df0[df0['Species'] == 'setosa']
     df2 = df0[df0['Species'] == 'versicolor']
 
+    df_se = df1[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]].loc[0:39]
+    df_vi = df2[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]].loc[50:89]
 
+    df_se_test = df1[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]].loc[40:49]
+    df_vi_test = df2[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]].loc[90:99]
 
-    df_se = df1[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]]
-    df_vi = df2[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]]
+    y_test = np.ones(20)
+    for i in range(10):
+        y_test[i + 10] = -1
+    df_test = df_se_test.append(df_vi_test)
 
-    df3 = df0[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]]
+    # df_test = df_test.apply(lambda x: (x-np.min(x))/ (np.max(x)-np.min(x))).values
+    df_test = df_test.apply(lambda x: (x - np.mean(x)) / np.std(x)).values
+    # print(y_test)
 
-    df_minmax = df3.apply(lambda x: (x-np.min(x))/ (np.max(x)-np.min(x)))
+    df3 = df_se.append(df_vi)
+
+    # df3 = df0[["Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"]]
+
+    df_minmax = df3.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))
     df_zscore = df3.apply(lambda x: (x - np.mean(x)) / np.std(x))
 
     global N, a, y, ker_val, df_input, b, C, gamma
 
-    df_input = df3.values
-    print(df_input)
+    df_input = df_zscore.values
     N = df_input.shape[0]
     a = np.zeros(N)
     y = np.ones(N)
     ker_val = np.mat(np.zeros([N, N]))
     gamma = 0.25
-    # print(df_input)
-    for k in range(df2.shape[0]):
-        y[N - k - 1] = -1
-
-    C = 1
+    C = 10
     b = 0.0
 
-    SMO(1000, 0, 0.0001)
+    for k in range(df_se.shape[0]):
+        y[N - k - 1] = -1
+
+    SMO(500, 0, 0.0001)
     w = cal_W(a)
-    # print(a)
     count = 0
-    for q in range(N):
-        print(np.dot(w, df_input[q]) + b)
-        if (np.dot(w, df_input[q])+b) * y[q] > 0:
+    for q in range(20):
+        if (np.dot(w, df_test[q]) + b) * y_test[q] > 0:
             count += 1
-    print(w)
-    print("accuracy:"+str(count/100))
+    print("mysvm accuracy:" + str(count / 20))
 
-
-    # for k in range(30):
-    #     gamma = 1 + 0.1 * (k+1)
-    #     a = np.zeros(N)
-    #     b = 0.0
-    #     SMO(2000, 1, 0.0001)
-    #     w = cal_W()
-    #     # print(a)
-    #     count = 0
-    #     for q in range(N):
-    #         if (np.dot(w, df_input[q])+b) * y[q] > 0:
-    #             count += 1
-    #     print(w)
-    #     print("accuracy:"+str(count/100))
-
-    # model = svm.SVC()
-    # model.fit(df_input,y)
-    # count = 0
-    # a_svc = model.decision_function(df_input)
-    # # print(a_svc)
-    # print(cal_W(a_svc))
-    # for q in range(N):
-    #     if (model.predict([df_input[q]]) * y[q]) > 0:
-    #         count += 1
-    # print("accuracy:"+str(count/100))
+    model = svm.SVC(kernel="linear")
+    model.fit(df_input, y)
+    count = 0
+    for q in range(20):
+        if (model.predict([df_test[q]]) * y_test[q]) > 0:
+            count += 1
+    print("svm.SVC accuracy:" + str(count / 20))
 
 
 if __name__ == '__main__':
